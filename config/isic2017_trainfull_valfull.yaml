@@ -1,7 +1,6 @@
 batch_size: 8
 n_epochs: 300
 lr: 0.003
-beta1: 0.5
 decay: 0.9
 train_fpath: /workspace/SegAN/data/train_full_isic1027.txt
 val_fpath: /workspace/SegAN/data/validation_full_isic1027.txt
