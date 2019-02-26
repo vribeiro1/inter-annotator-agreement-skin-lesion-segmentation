@@ -12,7 +12,7 @@ Contact me:<br>
 Requirements:
 
 * Docker
-* Python 3.6
+* Python 3.5
 
 How to run?
 
