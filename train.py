@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+import random
 
 from collections import OrderedDict
 from tqdm import tqdm
@@ -9,7 +10,6 @@ from torch.autograd import Variable
 from torch.utils import data
 from sacred import Experiment
 from sacred.observers import FileStorageObserver
-from random import random
 
 from dataset import SkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard
