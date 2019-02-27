@@ -5,21 +5,25 @@ import itertools
 
 from torch.utils.data import Dataset
 from torchvision.transforms import (Compose, ToTensor, Normalize, Resize)
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 from PIL import Image
 
 
 class SkinLesionSegmentationDataset(Dataset):
-    def __init__(self, fpath: str, augmentation: List=None, input_preprocess: List=None, target_preprocess: List=None,
+    def __init__(self, fpath: str, augmentation: List=None, input_preprocess: Callable=None, target_preprocess: Callable=None,
                  with_targets: bool=True, shape: Tuple=(256, 256)):
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
 
         if input_preprocess is None:
             input_preprocess = []
+        else:
+            input_preprocess = [input_preprocess]
 
         if target_preprocess is None:
             target_preprocess = []
+        else:
+            target_preprocess = [target_preprocess]
 
         if not augmentation:
             augmentation = []
