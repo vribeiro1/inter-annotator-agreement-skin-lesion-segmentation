@@ -5,13 +5,21 @@ import itertools
 
 from torch.utils.data import Dataset
 from torchvision.transforms import (Compose, ToTensor, Normalize, Resize)
+from typing import List, Tuple
 from PIL import Image
 
 
 class SkinLesionSegmentationDataset(Dataset):
-    def __init__(self, fpath, augmentation=None, with_targets=True, shape=(256, 256)):
+    def __init__(self, fpath: str, augmentation: List=None, input_preprocess: List=None, target_preprocess: List=None,
+                 with_targets: bool=True, shape: Tuple=(256, 256)):
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
+
+        if input_preprocess is None:
+            input_preprocess = []
+
+        if target_preprocess is None:
+            target_preprocess = []
 
         if not augmentation:
             augmentation = []
@@ -21,15 +29,15 @@ class SkinLesionSegmentationDataset(Dataset):
         self.with_targets = with_targets
         self.size = shape
 
-        self.input_transform = Compose([
-            Resize(size=self.size),
-            ToTensor(),
-            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-        self.target_transform = Compose([
-            Resize(size=self.size),
-            ToTensor()
-        ])
+        self.input_transform = Compose(
+            input_preprocess + [Resize(size=self.size),
+                                ToTensor(),
+                                Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+        )
+        self.target_transform = Compose(
+            target_preprocess + [Resize(size=self.size),
+                                 ToTensor()]
+        )
 
         self.augmentation = augmentation
 
@@ -79,6 +87,6 @@ class SkinLesionSegmentationDataset(Dataset):
 if __name__ == "__main__":
     fpath = "/Users/vribeiro/Documents/isic/train.txt"
 
-    dataset = SegANDataset(fpath)
+    dataset = SkinLesionSegmentationDataset(fpath)
     for input_img, target_img, fname in dataset:
         print(input_img.size(), target_img.size())
