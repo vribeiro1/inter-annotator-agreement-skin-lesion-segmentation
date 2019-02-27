@@ -104,8 +104,8 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, _run):
     best_loss = np.inf
 
     for epoch in epochs:
-        run_epoch("train", epoch, model, dataloaders["train"], optimizer, loss_fn, writer)
-        run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, writer)
+        info["train"] = run_epoch("train", epoch, model, dataloaders["train"], optimizer, loss_fn, writer)
+        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, writer)
 
         if info["validation"]["loss"] < best_loss:
             best_loss = info["validation"]["loss"]

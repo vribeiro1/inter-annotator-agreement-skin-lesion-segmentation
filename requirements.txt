@@ -1,7 +1,7 @@
-https://download.pytorch.org/whl/cu91/torch-0.4.0-cp35-cp35m-linux_x86_64.whl
 funcy
 Pillow
 sacred
 pyyaml
+torch
 torchvision
 tqdm
