@@ -105,7 +105,9 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, _run):
 
     for epoch in epochs:
         info["train"] = run_epoch("train", epoch, model, dataloaders["train"], optimizer, loss_fn, writer)
-        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, writer)
+        if epoch == 1 or epoch % 10 == 0:
+            info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, writer)
+            writer.commit()
 
         if info["validation"]["loss"] < best_loss:
             best_loss = info["validation"]["loss"]
