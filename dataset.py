@@ -14,6 +14,8 @@ class SkinLesionSegmentationDataset(Dataset):
                  with_targets: bool=True, shape: Tuple=(256, 256)):
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
+        self.with_targets = with_targets
+        self.size = shape
 
         if input_preprocess is None:
             input_preprocess = [
@@ -45,9 +47,6 @@ class SkinLesionSegmentationDataset(Dataset):
             augmentation = []
         n_augmentation = math.factorial(len(augmentation)) if len(augmentation) > 0 else 0
         augmentation_combinations = list(itertools.product([0, 1], repeat=n_augmentation))
-
-        self.with_targets = with_targets
-        self.size = shape
 
         self.input_transform = Compose(input_preprocess)
         self.target_transform = Compose(target_preprocess)
