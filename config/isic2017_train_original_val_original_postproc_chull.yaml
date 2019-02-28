@@ -1,0 +1,9 @@
+batch_size: 8
+n_epochs: 200
+lr: 0.003
+decay: 0.9
+train_fpath: /workspace/skin/data/train_full_isic2017.txt
+val_fpath: /workspace/skin/data/validation_full_isic2017.txt
+train_preprocess: original
+val_preprocess: original
+postprocess: convex_hull

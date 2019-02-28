@@ -16,14 +16,30 @@ class SkinLesionSegmentationDataset(Dataset):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
 
         if input_preprocess is None:
-            input_preprocess = []
+            input_preprocess = [
+                Resize(size=self.size),
+                ToTensor(),
+                Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ]
         else:
-            input_preprocess = [input_preprocess]
+            input_preprocess = [
+                Resize(size=self.size),
+                input_preprocess,
+                ToTensor(),
+                Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ]
 
         if target_preprocess is None:
-            target_preprocess = []
+            target_preprocess = [
+                Resize(size=self.size),
+                ToTensor()
+            ]
         else:
-            target_preprocess = [target_preprocess]
+            target_preprocess = [
+                Resize(size=self.size),
+                target_preprocess,
+                ToTensor()
+            ]
 
         if not augmentation:
             augmentation = []
@@ -33,15 +49,8 @@ class SkinLesionSegmentationDataset(Dataset):
         self.with_targets = with_targets
         self.size = shape
 
-        self.input_transform = Compose(
-            input_preprocess + [Resize(size=self.size),
-                                ToTensor(),
-                                Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
-        )
-        self.target_transform = Compose(
-            target_preprocess + [Resize(size=self.size),
-                                 ToTensor()]
-        )
+        self.input_transform = Compose(input_preprocess)
+        self.target_transform = Compose(target_preprocess)
 
         self.augmentation = augmentation
 

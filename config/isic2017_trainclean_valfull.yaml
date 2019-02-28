@@ -1,6 +1,0 @@
-batch_size: 8
-n_epochs: 300
-lr: 0.003
-decay: 0.9
-train_fpath: /workspace/skin/data/train_clean_isic2017.txt
-val_fpath: /workspace/skin/data/validation_full_isic1027.txt

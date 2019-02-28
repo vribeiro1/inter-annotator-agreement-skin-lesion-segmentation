@@ -1,6 +1,7 @@
 funcy
 Pillow
 sacred
+scikit-image
 pyyaml
 torch
 torchvision
