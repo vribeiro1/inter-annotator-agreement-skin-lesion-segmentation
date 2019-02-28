@@ -17,6 +17,10 @@ def evaluate_jaccard(outputs, targets):
     return jaccard
 
 
+def evaluate_dice(jaccard):
+    return 2 * jaccard / (1 + jaccard)
+
+
 class SoftJaccardBCEWithLogitsLoss:
     """
     Loss defined as BCE - log(soft_jaccard)

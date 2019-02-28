@@ -26,8 +26,8 @@ class SkinLesionSegmentationDataset(Dataset):
         else:
             input_preprocess = [
                 Resize(size=self.size),
-                input_preprocess,
                 ToTensor(),
+                input_preprocess,
                 Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ]
 
@@ -39,8 +39,8 @@ class SkinLesionSegmentationDataset(Dataset):
         else:
             target_preprocess = [
                 Resize(size=self.size),
-                target_preprocess,
-                ToTensor()
+                ToTensor(),
+                target_preprocess
             ]
 
         if not augmentation:

@@ -9,13 +9,13 @@ from tqdm import tqdm
 from torch import optim
 from torch.autograd import Variable
 from torch.utils import data
-from torchvision.transforms import ToPILImage, ToTensor
+from torchvision.transforms import ToTensor
 from sacred import Experiment
 from sacred.observers import FileStorageObserver
 from skimage.morphology import opening, convex_hull_image, square
 
 from dataset import SkinLesionSegmentationDataset
-from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard
+from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
 from summary_writer import SummaryWriter
 
@@ -26,32 +26,34 @@ fs_observer = FileStorageObserver.create("results")
 ex.observers.append(fs_observer)
 
 
-def transform(transform_fn, pil_image, mult=1, **kwargs):
-    img = np.array(pil_image)
+def transform(transform_fn, image_tensor, mult=1, **kwargs):
+    img = image_tensor.numpy()
     img = mult * transform_fn(img, **kwargs).astype(np.uint8)
     img = Image.fromarray(img)
+    img = img.point(lambda p: p > 255 // 2 and 255)
 
-    return img.point(lambda p: p > 255 // 2 and 255)
-
-
-def opening_preprocess(image):
-    if not isinstance(image, Image.Image):
-        image = ToPILImage()(image)
-
-    return transform(opening, image, selem=square(5))
+    return ToTensor()(img)
 
 
-def convex_hull_preprocess(image):
-    if not isinstance(image, Image.Image):
-        image = ToPILImage()(image)
+def opening_preprocess(image_tensor):
+    return transform(opening, image_tensor, selem=square(5))
 
-    return transform(convex_hull_image, image, mult=255)
+
+def convex_hull_preprocess(image_tensor):
+    return transform(convex_hull_image, image_tensor, mult=255)
+
+
+def transform_batch(transform_fn, batch_tensor):
+    transformed_batch = []
+    for tensor in batch_tensor:
+        transformed_batch.append(transform_fn(tensor))
+    return torch.stack(tuple(transformed_batch))
 
 
 available_transforms = {
     "original": lambda x: x,
     "opening": opening_preprocess,
-    "convex_hull": lambda x: x
+    "convex_hull": convex_hull_preprocess
 }
 
 
@@ -63,7 +65,6 @@ def set_seeds(worker_id):
 
 def run_epoch(phase, epoch, model, dataloader, postprocess_fn, optimizer, criterion, writer):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    to_tensor = ToTensor()
 
     progress_bar = tqdm(dataloader, desc="Epoch {} - {}".format(epoch, phase))
     training = phase == "train"
@@ -75,6 +76,7 @@ def run_epoch(phase, epoch, model, dataloader, postprocess_fn, optimizer, criter
 
     losses = []
     jaccards = []
+    dices = []
     for i, (inputs, targets, fname) in enumerate(progress_bar):
         inputs = Variable(inputs).to(device)
         targets = Variable(targets).to(device)
@@ -82,10 +84,11 @@ def run_epoch(phase, epoch, model, dataloader, postprocess_fn, optimizer, criter
         optimizer.zero_grad()
         with torch.set_grad_enabled(training):
             outputs = model(inputs)
-            outputs = to_tensor(postprocess_fn(outputs))
+            outputs = transform_batch(postprocess_fn, outputs)
 
             loss = criterion(outputs, targets)
             jaccard = evaluate_jaccard(outputs, targets)
+            dice = evaluate_dice(jaccard.item())
 
             if training:
                 loss.backward()
@@ -93,20 +96,26 @@ def run_epoch(phase, epoch, model, dataloader, postprocess_fn, optimizer, criter
 
             losses.append(loss.item())
             jaccards.append(jaccard.item())
+            dices.append(dice)
             progress_bar.set_postfix(OrderedDict({"{} loss".format(phase): np.mean(losses),
-                                                  "{} jaccard".format(phase): np.mean(jaccards)}))
+                                                  "{} jaccard".format(phase): np.mean(jaccards),
+                                                  "{} dice".format(phase): np.mean(dices)}))
 
     mean_loss = np.mean(losses)
     mean_jacc = np.mean(jaccards)
+    mean_dice = np.mean(dices)
 
     loss_tag = "{}.loss".format(phase)
     jacc_tag = "{}.jaccard".format(phase)
+    dice_tag = "{}.dice".format(phase)
 
     writer.add_scalar(loss_tag, mean_loss, epoch)
     writer.add_scalar(jacc_tag, mean_jacc, epoch)
+    writer.add_scalar(dice_tag, mean_dice, epoch)
 
     info = {"loss": mean_loss,
-            "jaccard": mean_jacc}
+            "jaccard": mean_jacc,
+            "dice": mean_dice}
 
     return info
 
@@ -151,7 +160,7 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
 
     info = {}
     epochs = range(1, n_epochs + 1)
-    best_loss = np.inf
+    best_jacc = np.inf
 
     for epoch in epochs:
         info["train"] = run_epoch("train", epoch, model, dataloaders["train"], postprocess_fn, optimizer, loss_fn, writer)
@@ -160,8 +169,8 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
         if epoch == 1 or epoch % 10 == 0:
             writer.commit()
 
-        if info["validation"]["loss"] < best_loss:
-            best_loss = info["validation"]["loss"]
+        if info["validation"]["loss"] < best_jacc:
+            best_jacc = info["validation"]["jaccard"]
             torch.save(model, model_path)
 
         if epoch % 25 == 0:
