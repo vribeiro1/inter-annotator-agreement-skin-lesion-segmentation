@@ -4,7 +4,7 @@ import math
 import itertools
 
 from torch.utils.data import Dataset
-from torchvision.transforms import (Compose, ToTensor, Normalize, Resize)
+from torchvision.transforms import Compose, ToTensor, ToPILImage, Normalize, Resize
 from typing import Callable, List, Tuple
 from PIL import Image
 
@@ -26,8 +26,8 @@ class SkinLesionSegmentationDataset(Dataset):
         else:
             input_preprocess = [
                 Resize(size=self.size),
-                ToTensor(),
                 input_preprocess,
+                ToTensor(),
                 Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ]
 
@@ -39,8 +39,8 @@ class SkinLesionSegmentationDataset(Dataset):
         else:
             target_preprocess = [
                 Resize(size=self.size),
+                target_preprocess,
                 ToTensor(),
-                target_preprocess
             ]
 
         if not augmentation:
@@ -64,12 +64,12 @@ class SkinLesionSegmentationDataset(Dataset):
         self.data = [(d, transform_list) for transform_list in augmentation_combinations for d in data]
 
     @staticmethod
-    def _load_input_image(fpath):
+    def _load_input_image(fpath: str):
         img = Image.open(fpath).convert("RGB")
         return img
 
     @staticmethod
-    def _load_target_image(fpath):
+    def _load_target_image(fpath: str):
         img = Image.open(fpath).convert("P")
         return img
 
@@ -97,8 +97,14 @@ class SkinLesionSegmentationDataset(Dataset):
 
 
 if __name__ == "__main__":
+    from transforms.target import Opening
+    from skimage.morphology import square
+
     fpath = "/Users/vribeiro/Documents/isic/train.txt"
 
-    dataset = SkinLesionSegmentationDataset(fpath)
+    to_pil = ToPILImage()
+
+    target_preprocess = Opening(square, 5)
+    dataset = SkinLesionSegmentationDataset(fpath, target_preprocess=target_preprocess)
     for input_img, target_img, fname in dataset:
-        print(input_img.size(), target_img.size())
+        to_pil(target_img).show()

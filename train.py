@@ -4,20 +4,20 @@ import torch
 import random
 
 from collections import OrderedDict
-from PIL import Image
 from tqdm import tqdm
 from torch import optim
 from torch.autograd import Variable
 from torch.utils import data
-from torchvision.transforms import ToTensor
+from torchvision.transforms import ToPILImage, ToTensor
 from sacred import Experiment
 from sacred.observers import FileStorageObserver
-from skimage.morphology import opening, convex_hull_image, square
+from skimage.morphology import square
 
 from dataset import SkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
 from summary_writer import SummaryWriter
+from transforms.target import Opening, ConvexHull
 
 base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,34 +26,23 @@ fs_observer = FileStorageObserver.create("results")
 ex.observers.append(fs_observer)
 
 
-def transform(transform_fn, image_tensor, mult=1, **kwargs):
-    img = image_tensor.numpy()
-    img = mult * transform_fn(img, **kwargs).astype(np.uint8)
-    img = Image.fromarray(img)
-    img = img.point(lambda p: p > 255 // 2 and 255)
-
-    return ToTensor()(img)
-
-
-def opening_preprocess(image_tensor):
-    return transform(opening, image_tensor, selem=square(5))
-
-
-def convex_hull_preprocess(image_tensor):
-    return transform(convex_hull_image, image_tensor, mult=255)
-
-
-def transform_batch(transform_fn, batch_tensor):
+def postprocess_batch(transform_fn, batch_tensor):
     transformed_batch = []
+    to_pil = ToPILImage()
+    to_tensor = ToTensor()
+
     for tensor in batch_tensor:
-        transformed_batch.append(transform_fn(tensor))
+        pil_img = to_pil(tensor)
+        img = to_tensor(transform_fn(pil_img))
+        transformed_batch.append(img)
+
     return torch.stack(tuple(transformed_batch))
 
 
 available_transforms = {
     "original": lambda x: x,
-    "opening": opening_preprocess,
-    "convex_hull": convex_hull_preprocess
+    "opening": Opening(square, 5),
+    "convex_hull": ConvexHull()
 }
 
 
@@ -63,7 +52,7 @@ def set_seeds(worker_id):
     random.seed(seed + 2)
 
 
-def run_epoch(phase, epoch, model, dataloader, postprocess_fn, optimizer, criterion, writer):
+def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion, writer):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     progress_bar = tqdm(dataloader, desc="Epoch {} - {}".format(epoch, phase))
@@ -84,7 +73,7 @@ def run_epoch(phase, epoch, model, dataloader, postprocess_fn, optimizer, criter
         optimizer.zero_grad()
         with torch.set_grad_enabled(training):
             outputs = model(inputs)
-            outputs = transform_batch(postprocess_fn, outputs)
+            outputs = postprocess_batch(postprocess, outputs)
 
             loss = criterion(outputs, targets)
             jaccard = evaluate_jaccard(outputs, targets)
