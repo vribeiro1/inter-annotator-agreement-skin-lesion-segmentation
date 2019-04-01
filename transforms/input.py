@@ -149,8 +149,8 @@ class ColorGradient:
     ]
 
     def __init__(self, factor=None, mode=None, color=0x000000):
-        if mode not in self.MODES:
-            raise Exception(f"Unavailable mode '{mode}'. Available modes are {self.MODES}")
+        if mode is not None and mode not in self.MODES:
+            raise Exception("Unavailable mode '{}'. Available modes are {}".format(mode, self.MODES))
 
         self.factor = factor
         self.mode = mode
