@@ -18,6 +18,7 @@ from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
+from transforms.input import GaussianNoise, EnhanceBrightness, EnhanceContrast, EnhanceColor, EnhanceSharpness, ColorGradient
 
 base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -67,13 +68,13 @@ def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion
     jaccards = []
     dices = []
     for i, (inputs, targets, fname) in enumerate(progress_bar):
-        inputs = Variable(inputs).to(device)
-        targets = Variable(targets).to(device)
+        inputs = Variable(inputs, requires_grad=True).to(device)
+        targets = Variable(targets, requires_grad=True).to(device)
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(training):
             outputs = model(inputs)
-            outputs = postprocess_batch(postprocess, outputs)
+            # outputs = postprocess_batch(postprocess, outputs)
 
             loss = criterion(outputs, targets)
             jaccard = evaluate_jaccard(outputs, targets)
@@ -131,7 +132,16 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
     optimizer = optim.Adam(model.parameters(), lr=lr)
     loss_fn = SoftJaccardBCEWithLogitsLoss(jaccard_weight=8)
 
-    train_dataset = SkinLesionSegmentationDataset(train_fpath, target_preprocess=train_preprocess_fn)
+    augmentations = [
+        GaussianNoise(0, 4),
+        EnhanceBrightness(0.5, 0.1),
+        EnhanceContrast(0.5, 0.1),
+        EnhanceColor(0.5, 0.1),
+        EnhanceSharpness(1.5, 0.1),
+        ColorGradient()
+    ]
+
+    train_dataset = SkinLesionSegmentationDataset(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
     val_dataset = SkinLesionSegmentationDataset(val_fpath, target_preprocess=val_preprocess_fn)
 
     dataloaders = {
