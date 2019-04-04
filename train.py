@@ -13,12 +13,13 @@ from sacred import Experiment
 from sacred.observers import FileStorageObserver
 from skimage.morphology import square
 
+from cyclic_lr import CyclicLR
 from dataset import SkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
-from transforms.input import GaussianNoise, EnhanceBrightness, EnhanceContrast, EnhanceColor, EnhanceSharpness, ColorGradient
+from transforms.input import GaussianNoise, EnhanceContrast, EnhanceColor
 
 base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -53,7 +54,7 @@ def set_seeds(worker_id):
     random.seed(seed + 2)
 
 
-def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion, writer):
+def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion, scheduler, writer):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     progress_bar = tqdm(dataloader, desc="Epoch {} - {}".format(epoch, phase))
@@ -83,6 +84,7 @@ def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion
             if training:
                 loss.backward()
                 optimizer.step()
+                scheduler.batch_step()
 
             losses.append(loss.item())
             jaccards.append(jaccard.item())
@@ -130,15 +132,13 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
 
     model = DeepLab(num_classes=1).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    scheduler = CyclicLR(optimizer, base_lr=1e-5, max_lr=1e-4, step_size=500)
     loss_fn = SoftJaccardBCEWithLogitsLoss(jaccard_weight=8)
 
     augmentations = [
-        GaussianNoise(0, 4),
-        EnhanceBrightness(0.5, 0.1),
+        GaussianNoise(0, 3),
         EnhanceContrast(0.5, 0.1),
-        EnhanceColor(0.5, 0.1),
-        EnhanceSharpness(1.5, 0.1),
-        ColorGradient()
+        EnhanceColor(0.5, 0.1)
     ]
 
     train_dataset = SkinLesionSegmentationDataset(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
@@ -162,8 +162,8 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
     best_jacc = np.inf
 
     for epoch in epochs:
-        info["train"] = run_epoch("train", epoch, model, dataloaders["train"], postprocess_fn, optimizer, loss_fn, writer)
-        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], postprocess_fn, optimizer, loss_fn, writer)
+        info["train"] = run_epoch("train", epoch, model, dataloaders["train"], postprocess_fn, optimizer, loss_fn, scheduler, writer)
+        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], postprocess_fn, optimizer, loss_fn, scheduler, writer)
 
         if epoch == 1 or epoch % 10 == 0:
             writer.commit()
@@ -172,6 +172,6 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
             best_jacc = info["validation"]["jaccard"]
             torch.save(model, model_path)
 
-        if epoch % 25 == 0:
-            lr = max(lr * decay, 0.00000001)
-            optimizer = optim.Adam(model.parameters(), lr=lr)
+        # if epoch % 25 == 0:
+        #     lr = max(lr * decay, 0.00000001)
+        #     optimizer = optim.Adam(model.parameters(), lr=lr)

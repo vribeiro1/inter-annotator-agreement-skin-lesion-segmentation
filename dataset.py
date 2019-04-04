@@ -42,7 +42,7 @@ class SkinLesionSegmentationDataset(Dataset):
 
     @staticmethod
     def _load_target_image(fpath: str):
-        img = Image.open(fpath).convert("P")
+        img = Image.open(fpath).convert("L")
         return img
 
     def __len__(self):
@@ -76,7 +76,7 @@ class SkinLesionSegmentationDataset(Dataset):
 
 
 if __name__ == "__main__":
-    from transforms.input import GaussianNoise, EnhanceBrightness
+    from transforms.input import GaussianNoise, EnhanceBrightness, EnhanceContrast, EnhanceColor, EnhanceSharpness, ColorGradient
     from transforms.target import Opening
     from skimage.morphology import square
 
@@ -85,8 +85,15 @@ if __name__ == "__main__":
     to_pil = ToPILImage()
 
     target_preprocess = Opening(square, 5)
-    augmentations = [GaussianNoise(0, 1), EnhanceBrightness(5, 2)]
+    augmentations = [
+        GaussianNoise(0, 4),
+        EnhanceBrightness(0.5, 0.1),
+        EnhanceContrast(0.5, 0.1),
+        EnhanceColor(0.5, 0.1),
+        EnhanceSharpness(1.5, 0.1),
+        ColorGradient()
+    ]
     dataset = SkinLesionSegmentationDataset(fpath, augmentations=augmentations, target_preprocess=target_preprocess)
     print(len(dataset))
     for input_img, target_img, fname in dataset:
-        to_pil(input_img).show()
+        print(input_img.size(), target_img.size())
