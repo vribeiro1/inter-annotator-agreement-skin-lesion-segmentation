@@ -28,16 +28,16 @@ class SoftJaccardBCEWithLogitsLoss:
     Satellite Imagery Feature Detection using Deep Convolutional Neural Network: A Kaggle Competition
     arXiv:1706.06169
     """
+    eps = 10e-5
+
     def __init__(self, jaccard_weight=0.0):
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.jacc_weight = jaccard_weight
 
     def __call__(self, outputs, targets):
         bce_loss = self.bce_loss(outputs, targets)
-
         jaccard = evaluate_jaccard(outputs, targets)
-        log_jaccard = math.log(jaccard)
-
+        log_jaccard = math.log(jaccard + self.eps)
         loss = bce_loss - self.jacc_weight * log_jaccard
 
         return loss

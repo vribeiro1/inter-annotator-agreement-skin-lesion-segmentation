@@ -2,7 +2,7 @@ import os
 import funcy
 
 from torch.utils.data import Dataset
-from torchvision.transforms import ToTensor, ToPILImage, Resize
+from torchvision.transforms import ToTensor, ToPILImage, Resize, Normalize
 from typing import Callable, List, Tuple
 from PIL import Image
 
@@ -21,6 +21,8 @@ class SkinLesionSegmentationDataset(Dataset):
             augmentations = [lambda x: x]
 
         self.resize = Resize(size=self.size)
+        # self.normalize = Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        self.normalize = Normalize([0.485, 0.456, 0.406], [1.0, 1.0, 1.0])
         self.to_tensor = ToTensor()
         self.input_preprocess = input_preprocess
         self.target_preprocess = target_preprocess
@@ -59,6 +61,7 @@ class SkinLesionSegmentationDataset(Dataset):
 
         input_img = augmentation(input_img)
         input_img = self.to_tensor(input_img)
+        input_img = self.normalize(input_img)
 
         target_img = None
         if target_fpath is not None:

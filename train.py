@@ -8,7 +8,6 @@ from tqdm import tqdm
 from torch import optim
 from torch.autograd import Variable
 from torch.utils import data
-from torchvision.transforms import ToPILImage, ToTensor
 from sacred import Experiment
 from sacred.observers import FileStorageObserver
 from skimage.morphology import square
@@ -28,20 +27,7 @@ fs_observer = FileStorageObserver.create("results")
 ex.observers.append(fs_observer)
 
 
-def postprocess_batch(transform_fn, batch_tensor):
-    transformed_batch = []
-    to_pil = ToPILImage()
-    to_tensor = ToTensor()
-
-    for tensor in batch_tensor:
-        pil_img = to_pil(tensor)
-        img = to_tensor(transform_fn(pil_img))
-        transformed_batch.append(img)
-
-    return torch.stack(tuple(transformed_batch))
-
-
-available_transforms = {
+available_conditioning = {
     "original": lambda x: x,
     "opening": Opening(square, 5),
     "convex_hull": ConvexHull()
@@ -49,12 +35,12 @@ available_transforms = {
 
 
 def set_seeds(worker_id):
-    seed = torch.initial_seed() % 2**31
+    seed = torch.initial_seed() % 2 ** 31
     np.random.seed(seed + 1)
     random.seed(seed + 2)
 
 
-def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion, scheduler, writer):
+def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, writer):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     progress_bar = tqdm(dataloader, desc="Epoch {} - {}".format(epoch, phase))
@@ -75,7 +61,6 @@ def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion
         optimizer.zero_grad()
         with torch.set_grad_enabled(training):
             outputs = model(inputs)
-            # outputs = postprocess_batch(postprocess, outputs)
 
             loss = criterion(outputs, targets)
             jaccard = evaluate_jaccard(outputs, targets)
@@ -113,14 +98,13 @@ def run_epoch(phase, epoch, model, dataloader, postprocess, optimizer, criterion
 
 
 @ex.automain
-def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preprocess, val_preprocess, postprocess, _run):
-    assert train_preprocess in available_transforms, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_transforms.keys()))
-    assert val_preprocess in available_transforms, "Validation pre-process '{}' is not available. Available functions are: '{}'".format(val_preprocess, list(available_transforms.keys()))
-    assert postprocess in available_transforms, "Post-process '{}' is not available. Available functions are: '{}'".format(postprocess, list(available_transforms.keys()))
+def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, postprocess, _run):
+    assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
+    assert val_preprocess in available_conditioning, "Validation pre-process '{}' is not available. Available functions are: '{}'".format(val_preprocess, list(available_conditioning.keys()))
+    assert postprocess in available_conditioning, "Post-process '{}' is not available. Available functions are: '{}'".format(postprocess, list(available_conditioning.keys()))
 
-    train_preprocess_fn = available_transforms[train_preprocess]
-    val_preprocess_fn = available_transforms[val_preprocess]
-    postprocess_fn = available_transforms[postprocess]
+    train_preprocess_fn = available_conditioning[train_preprocess]
+    val_preprocess_fn = available_conditioning[val_preprocess]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     writer = SummaryWriter(os.path.join(base_path, "runs", "experiment-{}".format(_run._id)))
@@ -136,9 +120,9 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
     loss_fn = SoftJaccardBCEWithLogitsLoss(jaccard_weight=8)
 
     augmentations = [
-        GaussianNoise(0, 3),
-        EnhanceContrast(0.5, 0.1),
-        EnhanceColor(0.5, 0.1)
+        GaussianNoise(0, 2),
+        # EnhanceContrast(0.5, 0.1),
+        # EnhanceColor(0.5, 0.1)
     ]
 
     train_dataset = SkinLesionSegmentationDataset(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
@@ -162,16 +146,10 @@ def main(batch_size, n_epochs, lr, decay, train_fpath, val_fpath, train_preproce
     best_jacc = np.inf
 
     for epoch in epochs:
-        info["train"] = run_epoch("train", epoch, model, dataloaders["train"], postprocess_fn, optimizer, loss_fn, scheduler, writer)
-        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], postprocess_fn, optimizer, loss_fn, scheduler, writer)
-
-        if epoch == 1 or epoch % 10 == 0:
-            writer.commit()
+        info["train"] = run_epoch("train", epoch, model, dataloaders["train"], optimizer, loss_fn, scheduler, writer)
+        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, scheduler, writer)
+        writer.commit()
 
         if info["validation"]["loss"] < best_jacc:
             best_jacc = info["validation"]["jaccard"]
             torch.save(model, model_path)
-
-        # if epoch % 25 == 0:
-        #     lr = max(lr * decay, 0.00000001)
-        #     optimizer = optim.Adam(model.parameters(), lr=lr)
