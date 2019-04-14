@@ -13,7 +13,7 @@ from sacred.observers import FileStorageObserver
 from skimage.morphology import square
 
 from cyclic_lr import CyclicLR
-from dataset import SkinLesionSegmentationDataset
+from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
 from summary_writer import SummaryWriter
@@ -98,10 +98,9 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
 
 @ex.automain
-def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, postprocess, _run):
+def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
     assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
     assert val_preprocess in available_conditioning, "Validation pre-process '{}' is not available. Available functions are: '{}'".format(val_preprocess, list(available_conditioning.keys()))
-    assert postprocess in available_conditioning, "Post-process '{}' is not available. Available functions are: '{}'".format(postprocess, list(available_conditioning.keys()))
 
     train_preprocess_fn = available_conditioning[train_preprocess]
     val_preprocess_fn = available_conditioning[val_preprocess]
@@ -125,8 +124,13 @@ def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val
         # EnhanceColor(0.5, 0.1)
     ]
 
-    train_dataset = SkinLesionSegmentationDataset(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
-    val_dataset = SkinLesionSegmentationDataset(val_fpath, target_preprocess=val_preprocess_fn)
+    if multimask:
+        DatasetClass = MultimaskSkinLesionSegmentationDataset
+    else:
+        DatasetClass = SkinLesionSegmentationDataset
+
+    train_dataset = DatasetClass(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
+    val_dataset = DatasetClass(val_fpath, target_preprocess=val_preprocess_fn)
 
     dataloaders = {
         "train": data.DataLoader(train_dataset,
