@@ -1,15 +1,16 @@
 import os
 import funcy
+import numpy as np
 
 from torch.utils.data import Dataset
-from torchvision.transforms import ToTensor, ToPILImage, Resize, Normalize
+from torchvision.transforms import ToTensor, Resize, Normalize
 from typing import Callable, List, Tuple
 from PIL import Image
 
 
 class SkinLesionSegmentationDataset(Dataset):
-    def __init__(self, fpath: str, augmentations: List=None, input_preprocess: Callable=None, target_preprocess: Callable=None,
-                 with_targets: bool=True, shape: Tuple=(256, 256)):
+    def __init__(self, fpath: str, augmentations: List=None, input_preprocess: Callable=None,
+                 target_preprocess: Callable=None, with_targets: bool=True, shape: Tuple=(256, 256)):
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
         self.with_targets = with_targets
@@ -78,25 +79,86 @@ class SkinLesionSegmentationDataset(Dataset):
         return input_img, target_img, fname
 
 
-if __name__ == "__main__":
-    from transforms.input import GaussianNoise, EnhanceBrightness, EnhanceContrast, EnhanceColor, EnhanceSharpness, ColorGradient
-    from transforms.target import Opening
-    from skimage.morphology import square
+class MultimaskSkinLesionSegmentationDataset(Dataset):
+    def __init__(self, fpath: str, augmentations: List = None, input_preprocess: Callable = None,
+                 target_preprocess: Callable = None, with_targets: bool = True, shape: Tuple = (256, 256)):
+        if not os.path.isfile(fpath):
+            raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
 
-    fpath = "/Users/vribeiro/Documents/isic/train.txt"
+        self.with_targets = with_targets
+        self.size = shape
 
-    to_pil = ToPILImage()
+        if augmentations:
+            augmentations = [lambda x: x] + augmentations
+        else:
+            augmentations = [lambda x: x]
 
-    target_preprocess = Opening(square, 5)
-    augmentations = [
-        GaussianNoise(0, 4),
-        EnhanceBrightness(0.5, 0.1),
-        EnhanceContrast(0.5, 0.1),
-        EnhanceColor(0.5, 0.1),
-        EnhanceSharpness(1.5, 0.1),
-        ColorGradient()
-    ]
-    dataset = SkinLesionSegmentationDataset(fpath, augmentations=augmentations, target_preprocess=target_preprocess)
-    print(len(dataset))
-    for input_img, target_img, fname in dataset:
-        print(input_img.size(), target_img.size())
+        self.resize = Resize(size=self.size)
+        # self.normalize = Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        self.normalize = Normalize([0.485, 0.456, 0.406], [1.0, 1.0, 1.0])
+        self.to_tensor = ToTensor()
+        self.input_preprocess = input_preprocess
+        self.target_preprocess = target_preprocess
+
+        with open(fpath, "r") as f:
+            lines = filter(lambda l: bool(l), f.read().split("\n"))
+            if self.with_targets:
+                data = []
+                for line in lines:
+                    fpaths = line.split(" ")
+                    input_ = fpaths[0].strip()
+                    targets = funcy.walk(lambda f: f.strip(), fpaths[1:])
+
+                    data.append(
+                        (input_, targets)
+                    )
+            else:
+                data = [(input.strip(), None) for input in lines]
+
+        self.data = [(d, augmentation) for augmentation in augmentations for d in data]
+
+    @staticmethod
+    def _load_input_image(fpath: str):
+        img = Image.open(fpath).convert("RGB")
+        return img
+
+    @staticmethod
+    def _load_target_image(fpath: str):
+        img = Image.open(fpath).convert("L")
+        return img
+
+    def _random_selection(self, targets_list: List[str]):
+        target_fpath = np.random.choice(targets_list)
+
+        target_img = self._load_target_image(target_fpath)
+        target_img = self.resize(target_img)
+
+        if self.target_preprocess is not None:
+            target_img = self.target_preprocess(target_img)
+
+        return target_img
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        (input_fpath, targets_fpaths), augmentation = self.data[item]
+
+        input_img = self._load_input_image(input_fpath)
+        input_img = self.resize(input_img)
+
+        if self.input_preprocess is not None:
+            input_img = self.input_preprocess(input_img)
+
+        input_img = augmentation(input_img)
+        input_img = self.to_tensor(input_img)
+        input_img = self.normalize(input_img)
+
+        target_img = None
+        if self.with_targets:
+            target_img = self._random_selection(targets_fpaths)
+            target_img = self.to_tensor(target_img)
+
+        fname = os.path.basename(input_fpath).split(".")[0]
+
+        return input_img, target_img, fname
