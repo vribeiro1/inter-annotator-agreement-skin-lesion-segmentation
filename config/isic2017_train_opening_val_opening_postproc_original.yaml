@@ -1,8 +1,0 @@
-batch_size: 16
-n_epochs: 200
-lr: 0.003
-train_fpath: /workspace/skin/data/train_full_isic2017.txt
-val_fpath: /workspace/skin/data/validation_full_isic2017.txt
-train_preprocess: opening
-val_preprocess: opening
-postprocess: original
