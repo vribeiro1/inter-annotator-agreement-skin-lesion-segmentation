@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 from dataset import SkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
-from model.deeplab import DeepLab
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -67,10 +66,7 @@ def main(data_name, fpath, model_path, save_to=None):
     dataset = SkinLesionSegmentationDataset(fpath)
     dataloader = data.DataLoader(dataset, batch_size=16, num_workers=8, shuffle=False, worker_init_fn=set_seeds)
     loss_fn = SoftJaccardBCEWithLogitsLoss(jaccard_weight=8)
-
-    model = DeepLab(num_classes=1)
-    model.load_state_dict(torch.load(model_path))
-    model = model.to(device)
+    model = torch.load(model_path).to(device)
 
     info = run_test(model, dataloader, loss_fn)
 
@@ -91,7 +87,7 @@ if __name__ == "__main__":
     test_isic_titans_path = os.path.join(BASE_PATH, "data", "test_isic_titans.txt")
     test_ph2_path = os.path.join(BASE_PATH, "data", "test_ph2.txt")
 
-    main("dermofit", test_dermofit_path, args.model_path, args.save_to)
+    # main("dermofit", test_dermofit_path, args.model_path, args.save_to)
     main("isic_titans", test_isic_titans_path, args.model_path, args.save_to)
     main("ph2", test_ph2_path, args.model_path, args.save_to)
 
