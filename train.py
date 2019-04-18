@@ -16,6 +16,7 @@ from cyclic_lr import CyclicLR
 from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
+from model.unet import UNet16
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
 from transforms.input import GaussianNoise, EnhanceContrast, EnhanceColor
@@ -113,7 +114,8 @@ def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val
     if not os.path.exists(outputs_path):
         os.mkdir(outputs_path)
 
-    model = DeepLab(num_classes=1).to(device)
+    # model = DeepLab(num_classes=1).to(device)
+    model = UNet16(pretrained=True).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = CyclicLR(optimizer, base_lr=1e-5, max_lr=1e-4, step_size=500)
     loss_fn = SoftJaccardBCEWithLogitsLoss(jaccard_weight=8)
