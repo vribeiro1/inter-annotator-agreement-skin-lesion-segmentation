@@ -1,0 +1,9 @@
+model: unet
+batch_size: 16
+n_epochs: 150
+lr: 0.003
+train_fpath: /workspace/skin/data/isic_2018_train.txt
+val_fpath:
+train_preprocess: original
+val_preprocess:
+multimask: false

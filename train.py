@@ -16,7 +16,7 @@ from cyclic_lr import CyclicLR
 from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab import DeepLab
-from model.unet import UNet16
+from model.unet import UNet11
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
 from transforms.input import GaussianNoise, EnhanceContrast, EnhanceColor
@@ -99,31 +99,36 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
 
 @ex.automain
-def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
+def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
     assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
     assert val_preprocess in available_conditioning, "Validation pre-process '{}' is not available. Available functions are: '{}'".format(val_preprocess, list(available_conditioning.keys()))
 
-    train_preprocess_fn = available_conditioning[train_preprocess]
-    val_preprocess_fn = available_conditioning[val_preprocess]
+    run_validation = val_fpath is not None
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     writer = SummaryWriter(os.path.join(base_path, "runs", "experiment-{}".format(_run._id)))
-    model_path = os.path.join(fs_observer.dir, "best_model.pth")
+    best_model_path = os.path.join(fs_observer.dir, "best_model.pth")
+    last_model_path = os.path.join(fs_observer.dir, "last_model.pth")
 
     outputs_path = os.path.join(fs_observer.dir, "outputs")
     if not os.path.exists(outputs_path):
         os.mkdir(outputs_path)
 
-    # model = DeepLab(num_classes=1).to(device)
-    model = UNet16(pretrained=True).to(device)
+    if model == "deeplab":
+        model = DeepLab(num_classes=1).to(device)
+    elif model == "unet":
+        model = UNet11(pretrained=False).to(device)
+    else:
+        raise Exception("Invalid model '{}'".format(model))
+
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = CyclicLR(optimizer, base_lr=1e-5, max_lr=1e-4, step_size=500)
     loss_fn = SoftJaccardBCEWithLogitsLoss(jaccard_weight=8)
 
     augmentations = [
         GaussianNoise(0, 2),
-        # EnhanceContrast(0.5, 0.1),
-        # EnhanceColor(0.5, 0.1)
+        EnhanceContrast(0.5, 0.1),
+        EnhanceColor(0.5, 0.1)
     ]
 
     if multimask:
@@ -131,21 +136,24 @@ def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val
     else:
         DatasetClass = SkinLesionSegmentationDataset
 
-    train_dataset = DatasetClass(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
-    val_dataset = DatasetClass(val_fpath, target_preprocess=val_preprocess_fn)
+    dataloaders = {}
 
-    dataloaders = {
-        "train": data.DataLoader(train_dataset,
-                                 batch_size=batch_size,
-                                 num_workers=8,
-                                 shuffle=True,
-                                 worker_init_fn=set_seeds),
-        "validation": data.DataLoader(val_dataset,
-                                      batch_size=batch_size,
-                                      num_workers=8,
-                                      shuffle=False,
-                                      worker_init_fn=set_seeds)
-    }
+    train_preprocess_fn = available_conditioning[train_preprocess]
+    train_dataset = DatasetClass(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
+    dataloaders["train"] = data.DataLoader(train_dataset,
+                                           batch_size=batch_size,
+                                           num_workers=8,
+                                           shuffle=True,
+                                           worker_init_fn=set_seeds)
+
+    if run_validation:
+        val_preprocess_fn = available_conditioning[val_preprocess]
+        val_dataset = DatasetClass(val_fpath, target_preprocess=val_preprocess_fn)
+        dataloaders["validation"] = data.DataLoader(val_dataset,
+                                                    batch_size=batch_size,
+                                                    num_workers=8,
+                                                    shuffle=False,
+                                                    worker_init_fn=set_seeds)
 
     info = {}
     epochs = range(1, n_epochs + 1)
@@ -153,9 +161,13 @@ def main(batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val
 
     for epoch in epochs:
         info["train"] = run_epoch("train", epoch, model, dataloaders["train"], optimizer, loss_fn, scheduler, writer)
-        info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, scheduler, writer)
+
+        if run_validation:
+            info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, scheduler, writer)
+            if info["validation"]["loss"] < best_jacc:
+                best_jacc = info["validation"]["jaccard"]
+                torch.save(model, best_model_path)
+
         writer.commit()
 
-        if info["validation"]["loss"] < best_jacc:
-            best_jacc = info["validation"]["jaccard"]
-            torch.save(model, model_path)
+    torch.save(model, last_model_path)
