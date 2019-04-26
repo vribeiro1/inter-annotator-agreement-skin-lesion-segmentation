@@ -100,10 +100,11 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
 @ex.automain
 def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
-    assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
-    assert val_preprocess in available_conditioning, "Validation pre-process '{}' is not available. Available functions are: '{}'".format(val_preprocess, list(available_conditioning.keys()))
-
     run_validation = val_fpath is not None
+
+    assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
+    if run_validation:
+        assert val_preprocess in available_conditioning, "Validation pre-process '{}' is not available. Available functions are: '{}'".format(val_preprocess, list(available_conditioning.keys()))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     writer = SummaryWriter(os.path.join(base_path, "runs", "experiment-{}".format(_run._id)))
