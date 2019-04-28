@@ -55,6 +55,7 @@ class SkinLesionSegmentationDataset(Dataset):
         (input_fpath, target_fpath), augmentation = self.data[item]
 
         input_img = self._load_input_image(input_fpath)
+        width, height = input_img.size
         input_img = self.resize(input_img)
 
         if self.input_preprocess is not None:
@@ -64,7 +65,7 @@ class SkinLesionSegmentationDataset(Dataset):
         input_img = self.to_tensor(input_img)
         input_img = self.normalize(input_img)
 
-        target_img = None
+        target_img = ""
         if target_fpath is not None:
             target_img = self._load_target_image(target_fpath)
             target_img = self.resize(target_img)
@@ -76,7 +77,7 @@ class SkinLesionSegmentationDataset(Dataset):
 
         fname = os.path.basename(input_fpath).split(".")[0]
 
-        return input_img, target_img, fname
+        return input_img, target_img, fname, (width, height)
 
 
 class MultimaskSkinLesionSegmentationDataset(Dataset):
@@ -145,6 +146,7 @@ class MultimaskSkinLesionSegmentationDataset(Dataset):
         (input_fpath, targets_fpaths), augmentation = self.data[item]
 
         input_img = self._load_input_image(input_fpath)
+        width, height = input_img.size
         input_img = self.resize(input_img)
 
         if self.input_preprocess is not None:
@@ -161,4 +163,4 @@ class MultimaskSkinLesionSegmentationDataset(Dataset):
 
         fname = os.path.basename(input_fpath).split(".")[0]
 
-        return input_img, target_img, fname
+        return input_img, target_img, fname, (width, height)

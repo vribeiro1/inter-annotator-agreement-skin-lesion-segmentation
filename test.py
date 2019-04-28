@@ -31,7 +31,7 @@ def run_test(model, dataloader, criterion):
     losses = []
     jaccards = []
     dices = []
-    for i, (inputs, targets, fname) in enumerate(progress_bar):
+    for i, (inputs, targets, fname, (_, _)) in enumerate(progress_bar):
         inputs = Variable(inputs, requires_grad=True).to(device)
         targets = Variable(targets, requires_grad=True).to(device)
 
