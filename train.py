@@ -17,6 +17,7 @@ from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentati
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab.deeplab import DeepLab
 from model.unet import UNet11
+from model.pspnet.pspnet import PSPNet
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
 from transforms.input import GaussianNoise, EnhanceContrast, EnhanceColor
@@ -119,6 +120,8 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
         model = DeepLab(num_classes=1).to(device)
     elif model == "unet":
         model = UNet11(pretrained=False).to(device)
+    elif model == "pspnet":
+        model = PSPNet(n_classes=1, pretrained=True).to(device)
     else:
         raise Exception("Invalid model '{}'".format(model))
 
@@ -169,6 +172,5 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
                 best_jacc = info["validation"]["jaccard"]
                 torch.save(model, best_model_path)
 
+        torch.save(model, last_model_path)
         writer.commit()
-
-    torch.save(model, last_model_path)
