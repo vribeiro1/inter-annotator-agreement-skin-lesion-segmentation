@@ -15,7 +15,7 @@ from skimage.morphology import square
 from cyclic_lr import CyclicLR
 from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
-from model.deeplab import DeepLab
+from model.deeplab.deeplab import DeepLab
 from model.unet import UNet11
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
