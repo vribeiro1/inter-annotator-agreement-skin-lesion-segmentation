@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 
-from model.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 
 
 def fixed_padding(inputs, kernel_size, dilation):
@@ -96,6 +96,7 @@ class AlignedXception(nn.Module):
     """
     Modified Alighed Xception
     """
+
     def __init__(self, output_stride, BatchNorm,
                  pretrained=True):
         super(AlignedXception, self).__init__()
@@ -110,7 +111,6 @@ class AlignedXception(nn.Module):
             exit_block_dilations = (2, 4)
         else:
             raise NotImplementedError
-
 
         # Entry flow
         self.conv1 = nn.Conv2d(3, 32, 3, stride=2, padding=1, bias=False)
@@ -127,18 +127,18 @@ class AlignedXception(nn.Module):
                             start_with_relu=True, grow_first=True, is_last=True)
 
         # Middle flow
-        self.block4  = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
-                             BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
-        self.block5  = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
-                             BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
-        self.block6  = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
-                             BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
-        self.block7  = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
-                             BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
-        self.block8  = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
-                             BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
-        self.block9  = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
-                             BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
+        self.block4 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
+                            BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
+        self.block5 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
+                            BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
+        self.block6 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
+                            BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
+        self.block7 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
+                            BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
+        self.block8 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
+                            BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
+        self.block9 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
+                            BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
         self.block10 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
                              BatchNorm=BatchNorm, start_with_relu=True, grow_first=True)
         self.block11 = Block(728, 728, reps=3, stride=1, dilation=middle_block_dilation,
@@ -280,6 +280,7 @@ class AlignedXception(nn.Module):
 
 if __name__ == "__main__":
     import torch
+
     model = AlignedXception(BatchNorm=nn.BatchNorm2d, pretrained=True, output_stride=16)
     input = torch.rand(1, 3, 512, 512)
     output, low_level_feat = model(input)

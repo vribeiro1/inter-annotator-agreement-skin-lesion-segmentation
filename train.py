@@ -99,7 +99,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
 
 @ex.automain
-def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
+def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, crf, _run):
     run_validation = val_fpath is not None
 
     assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))

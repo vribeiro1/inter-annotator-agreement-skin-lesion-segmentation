@@ -2,7 +2,7 @@ import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
 
-from model.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 
 webroot = 'https://tigress-web.princeton.edu/~fy/drn/models/'
 
@@ -280,7 +280,7 @@ class DRN_A(nn.Module):
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes,
-                                dilation=(dilation, dilation, ), BatchNorm=BatchNorm))
+                                dilation=(dilation, dilation,), BatchNorm=BatchNorm))
 
         return nn.Sequential(*layers)
 
@@ -397,6 +397,7 @@ def drn_d_105(BatchNorm, pretrained=True):
 
 if __name__ == "__main__":
     import torch
+
     model = drn_a_50(BatchNorm=nn.BatchNorm2d, pretrained=True)
     input = torch.rand(1, 3, 512, 512)
     output, low_level_feat = model(input)

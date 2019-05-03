@@ -9,8 +9,8 @@
 # Distributed under MIT License.
 
 import unittest
-
 import numpy as np
+ß
 from torch.autograd import Variable
 
 
@@ -24,6 +24,7 @@ class TorchTestCase(unittest.TestCase):
     def assertTensorClose(self, a, b, atol=1e-3, rtol=1e-3):
         npa, npb = as_numpy(a), as_numpy(b)
         self.assertTrue(
-                np.allclose(npa, npb, atol=atol),
-                'Tensor close check failed\n{}\n{}\nadiff={}, rdiff={}'.format(a, b, np.abs(npa - npb).max(), np.abs((npa - npb) / np.fmax(npa, 1e-5)).max())
+            np.allclose(npa, npb, atol=atol),
+            'Tensor close check failed\n{}\n{}\nadiff={}, rdiff={}'.format(a, b, np.abs(npa - npb).max(), np.abs(
+                (npa - npb) / np.fmax(npa, 1e-5)).max())
         )
