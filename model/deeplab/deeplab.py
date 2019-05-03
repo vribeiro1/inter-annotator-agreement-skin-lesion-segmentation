@@ -1,15 +1,15 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
-from model.aspp import build_aspp
-from model.decoder import build_decoder
-from model.backbone import build_backbone
+from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+from model.deeplab.aspp import build_aspp
+from model.deeplab.decoder import build_decoder
+from model.deeplab.backbone import build_backbone
+from model.torchcrf import CRF
 
 
 class DeepLab(nn.Module):
-    def __init__(self, backbone='resnet', output_stride=16, num_classes=21, sync_bn=True, freeze_bn=False):
+    def __init__(self, backbone='resnet', output_stride=16, num_classes=21, sync_bn=True, freeze_bn=False, crf=False):
         super(DeepLab, self).__init__()
         if backbone == 'drn':
             output_stride = 8
@@ -26,11 +26,19 @@ class DeepLab(nn.Module):
         if freeze_bn:
             self.freeze_bn()
 
+        if crf:
+            self.crf = CRF(num_tags=num_classes)
+        else:
+            self.crf = None
+
     def forward(self, input):
         x, low_level_feat = self.backbone(input)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
+
+        if self.crf is not None:
+            x = self.crf(x)
 
         return x
 
@@ -60,13 +68,3 @@ class DeepLab(nn.Module):
                     for p in m[1].parameters():
                         if p.requires_grad:
                             yield p
-
-
-if __name__ == "__main__":
-    model = DeepLab(backbone='mobilenet', output_stride=16)
-    model.eval()
-    input = torch.rand(1, 3, 513, 513)
-    output = model(input)
-    print(output.size())
-
-
