@@ -1,13 +1,12 @@
 import argparse
+import cv2
 import os
 import torch
 import numpy as np
 import random
 
-from skimage.io import imsave
 from skimage.transform import resize
 from torch.utils import data
-from torch.nn import functional as F
 from tqdm import tqdm
 
 from dataset import SkinLesionSegmentationDataset
@@ -32,14 +31,15 @@ def main(model_path, data_path, save_to=None):
         inputs = inputs.to(device)
 
         with torch.no_grad():
-            outputs = F.sigmoid(model(inputs))
+            outputs = torch.sigmoid(model(inputs))
 
         for output, fname, width, height in zip(outputs, fnames, widths, heights):
             output_img = output.float().squeeze().numpy()
-            output_img[output_img < 0.5] = 0.0
-            output_img[output_img >= 0.5] = 1.0
             output_img = resize(output_img, (height, width))
-            imsave(os.path.join(save_to, fname + ".png"), output_img)
+            output_img[output_img < 0.5] = 0.0
+            output_img[output_img >= 0.5] = 255.0
+
+            cv2.imwrite(os.path.join(save_to, fname + "_segmentation.png"), output_img.astype(np.uint8))
 
 
 if __name__ == "__main__":
