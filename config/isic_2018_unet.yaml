@@ -7,3 +7,4 @@ val_fpath:
 train_preprocess: original
 val_preprocess:
 multimask: false
+crf: true

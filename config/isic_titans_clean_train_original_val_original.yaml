@@ -6,3 +6,4 @@ val_fpath: /workspace/skin/data/validation_isic_titans_clean.txt
 train_preprocess: original
 val_preprocess: original
 multimask: true
+crf: true
