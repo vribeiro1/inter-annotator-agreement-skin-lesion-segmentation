@@ -1,7 +1,6 @@
 import torch.nn as nn
 
 from torchvision.models import resnet
-
 from model.torchcrf import GaussCRF
 
 
@@ -148,7 +147,7 @@ class LinkNet(nn.Module):
         y = self.lsm(y)
 
         if self.crf is not None:
-            y = self.crf(y)
+            y = self.crf(y, x)
 
         return y
 

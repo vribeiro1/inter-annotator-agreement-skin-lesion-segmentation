@@ -1,13 +1,12 @@
 import math
+import torch
 import torch.nn as nn
-
-from torch.nn import functional as F
 
 
 def evaluate_jaccard(outputs, targets):
     eps = 1e-15
     jaccard_targets = (targets == 1).float()
-    jaccard_outputs = F.sigmoid(outputs)
+    jaccard_outputs = torch.sigmoid(outputs)
 
     intersection = (jaccard_outputs * jaccard_targets).sum()
     union = jaccard_outputs.sum() + jaccard_targets.sum()

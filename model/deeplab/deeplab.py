@@ -38,7 +38,7 @@ class DeepLab(nn.Module):
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
 
         if self.crf is not None:
-            x = self.crf(x)
+            x = self.crf(x, input)
 
         return x
 

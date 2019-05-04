@@ -95,7 +95,7 @@ class UNet11(nn.Module):
         final = self.final(dec1)
 
         if self.crf is not None:
-            final = self.crf(final)
+            final = self.crf(final, x)
 
         return final
 
@@ -314,6 +314,6 @@ class UNet16(nn.Module):
             x_out = F.log_softmax(self.final(dec1), dim=1)
         else:
             x_out = self.final(dec1)
-            x_out = F.sigmoid(x_out)
+            x_out = torch.sigmoid(x_out)
 
         return x_out
