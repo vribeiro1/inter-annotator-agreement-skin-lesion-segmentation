@@ -29,31 +29,32 @@ from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 default_conf = {
-    'filter_size': 11,
-    'blur': 4,
-    'merge': True,
-    'norm': None,
-    'weight': 'vector',
+    "filter_size": 11,
+    "blur": 4,
+    "merge": True,
+    "norm": None,
+    "weight": "vector",
     "unary_weight": 1,
     "weight_init": 0.2,
 
-    'trainable': False,
-    'convcomp': False,
-    'logsoftmax': True,  # use logsoftmax for numerical stability
-    'softmax': True,
-    'final_softmax': False,
+    "trainable": False,
+    "convcomp": False,
+    "logsoftmax": True,  # Use logsoftmax for numerical stability
+    "softmax": False,
+    "final_softmax": False,
 
-    'pos_feats': {
-        'sdims': 3,
-        'compat': 3,
+    "pos_feats": {
+        "sdims": 3,
+        "compat": 3,
     },
-    'col_feats': {
-        'sdims': 80,
-        'schan': 13,   # schan depend on the input scale.
-                       # use schan = 13 for images in [0, 255]
-                       # for normalized images in [-0.5, 0.5] try schan = 0.1
-        'compat': 10,
-        'use_bias': False
+    "col_feats": {
+        "sdims": 80,
+        # schan depends on the input scale.
+        # Use schan = 13 for images in [0, 255].
+        # For normalized images in [-0.5, 0.5], try schan = 0.1
+        "schan": 0.1,
+        "compat": 10,
+        "use_bias": False
     },
     "trainable_bias": False,
 
@@ -145,8 +146,12 @@ class GaussCRF(nn.Module):
 
         pos_feats = self.create_position_feats(sdims=self.pos_sdims, bs=bs)
         col_feats = self.create_colour_feats(
-            img, sdims=self.col_sdims, schan=self.col_schan,
-            bias=conf["col_feats"]["use_bias"], bs=bs)
+            img,
+            sdims=self.col_sdims,
+            schan=self.col_schan,
+            bias=conf["col_feats"]["use_bias"],
+            bs=bs
+        )
 
         compats = [self.pos_compat, self.col_compat]
 
@@ -180,14 +185,6 @@ class GaussCRF(nn.Module):
             return torch.stack(bs * [self.mesh * sdims])
         else:
             return torch.stack(bs * [Variable(self.mesh) * sdims])
-
-
-def exp_and_normalize(features, dim=0):
-    """
-    Aka "softmax" in deep learning literature
-    """
-    normalized = torch.nn.functional.softmax(features, dim=dim)
-    return normalized
 
 
 def _get_ind(dz):
@@ -479,16 +476,15 @@ class ConvCRF(nn.Module):
         )
 
     def inference(self, unary, num_iter=5):
-
-        if not self.conf["logsoftmax"]:
-            lg_unary = torch.log(unary)
-            prediction = exp_and_normalize(lg_unary, dim=1)
-        else:
+        if self.conf["logsoftmax"]:
             lg_unary = nnfun.log_softmax(unary, dim=1, _stacklevel=5)
-            if self.conf["softmax"] and False:
-                prediction = exp_and_normalize(lg_unary, dim=1)
+            if self.conf["softmax"]:
+                prediction = F.softmax(lg_unary, dim=1)
             else:
                 prediction = lg_unary
+        else:
+            lg_unary = torch.log(unary)
+            prediction = F.softmax(lg_unary, dim=1)
 
         for i in range(num_iter):
             message = self.kernel.compute(prediction)
@@ -506,7 +502,7 @@ class ConvCRF(nn.Module):
 
             if not i == num_iter - 1 or self.final_softmax:
                 if self.conf["softmax"]:
-                    prediction = exp_and_normalize(prediction, dim=1)
+                    prediction = F.softmax(prediction, dim=1)
 
         return prediction
 

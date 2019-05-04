@@ -22,8 +22,7 @@ class SkinLesionSegmentationDataset(Dataset):
             augmentations = [lambda x: x]
 
         self.resize = Resize(size=self.size)
-        # self.normalize = Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        self.normalize = Normalize([0.485, 0.456, 0.406], [1.0, 1.0, 1.0])
+        self.normalize = Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         self.to_tensor = ToTensor()
         self.input_preprocess = input_preprocess
         self.target_preprocess = target_preprocess
