@@ -79,7 +79,7 @@ class LinkNet(nn.Module):
     Generate Model Architecture
     """
 
-    def __init__(self, n_classes=21):
+    def __init__(self, n_classes=21, softmax=False):
         """
         Model initialization
         :param x_n: number of input neurons
@@ -116,6 +116,8 @@ class LinkNet(nn.Module):
         self.tp_conv2 = nn.ConvTranspose2d(32, n_classes, 2, 2, 0)
         self.lsm = nn.LogSoftmax(dim=1)
 
+        self.use_lsm = softmax
+
     def forward(self, x):
         # Initial block
         x = self.in_block(x)
@@ -138,7 +140,8 @@ class LinkNet(nn.Module):
         y = self.conv2(y)
         y = self.tp_conv2(y)
 
-        y = self.lsm(y)
+        if self.use_lsm:
+            y = self.lsm(y)
 
         return y
 

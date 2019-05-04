@@ -16,6 +16,7 @@ from cyclic_lr import CyclicLR
 from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
 from model.deeplab.deeplab import DeepLab
+from model.autodeeplab.auto_deeplab import AutoDeeplab
 from model.unet import UNet11
 from model.linknet import LinkNet
 from summary_writer import SummaryWriter
@@ -118,6 +119,8 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
 
     if model == "deeplab":
         model = DeepLab(num_classes=1).to(device)
+    elif model == "autodeeplab":
+            model = AutoDeeplab(num_classes=1).to(device)
     elif model == "unet":
         model = UNet11(pretrained=True).to(device)
     elif model == "linknet":
