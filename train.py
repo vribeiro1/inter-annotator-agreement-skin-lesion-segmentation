@@ -119,7 +119,7 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
     if model == "deeplab":
         model = DeepLab(num_classes=1).to(device)
     elif model == "unet":
-        model = UNet11(pretrained=False).to(device)
+        model = UNet11(pretrained=True).to(device)
     elif model == "linknet":
         model = LinkNet(n_classes=1).to(device)
     else:
