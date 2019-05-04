@@ -6,4 +6,3 @@ val_fpath: /workspace/skin/data/validation_full_isic2017.txt
 train_preprocess: original
 val_preprocess: opening
 multimask: false
-crf: true

@@ -100,7 +100,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
 
 @ex.automain
-def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, crf, _run):
+def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
     run_validation = val_fpath is not None
 
     assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
@@ -117,11 +117,11 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
         os.mkdir(outputs_path)
 
     if model == "deeplab":
-        model = DeepLab(num_classes=1, crf=crf).to(device)
+        model = DeepLab(num_classes=1).to(device)
     elif model == "unet":
-        model = UNet11(pretrained=False, crf=crf).to(device)
+        model = UNet11(pretrained=False).to(device)
     elif model == "linknet":
-        model = LinkNet(n_classes=1, crf=crf).to(device)
+        model = LinkNet(n_classes=1).to(device)
     else:
         raise Exception("Invalid model '{}'".format(model))
 

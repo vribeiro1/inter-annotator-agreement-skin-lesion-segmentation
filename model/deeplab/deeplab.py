@@ -5,11 +5,10 @@ from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 from model.deeplab.aspp import build_aspp
 from model.deeplab.decoder import build_decoder
 from model.deeplab.backbone import build_backbone
-from model.torchcrf import GaussCRF
 
 
 class DeepLab(nn.Module):
-    def __init__(self, backbone='resnet', output_stride=16, num_classes=21, sync_bn=True, freeze_bn=False, crf=False):
+    def __init__(self, backbone='resnet', output_stride=16, num_classes=21, sync_bn=True, freeze_bn=False):
         super(DeepLab, self).__init__()
         if backbone == 'drn':
             output_stride = 8
@@ -26,19 +25,11 @@ class DeepLab(nn.Module):
         if freeze_bn:
             self.freeze_bn()
 
-        if crf:
-            self.crf = GaussCRF(n_classes=num_classes)
-        else:
-            self.crf = None
-
     def forward(self, input):
         x, low_level_feat = self.backbone(input)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=input.size()[2:], mode='bilinear', align_corners=True)
-
-        if self.crf is not None:
-            x = self.crf(x, input)
 
         return x
 

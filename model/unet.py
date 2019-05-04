@@ -5,8 +5,6 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision import models
 
-from model.torchcrf import GaussCRF
-
 
 def conv3x3(in_, out):
     return nn.Conv2d(in_, out, 3, padding=1)
@@ -39,7 +37,7 @@ class DecoderBlock(nn.Module):
 
 
 class UNet11(nn.Module):
-    def __init__(self, num_filters=32, pretrained=False, shape=(256, 256), crf=False):
+    def __init__(self, num_filters=32, pretrained=False):
         """
         :param num_classes:
         :param num_filters:
@@ -70,10 +68,6 @@ class UNet11(nn.Module):
         self.dec1 = ConvRelu(num_filters * (2 + 1), num_filters)
 
         self.final = nn.Conv2d(num_filters, 1, kernel_size=1)
-        if crf:
-            self.crf = GaussCRF(n_classes=1)
-        else:
-            self.crf = None
 
     def forward(self, x):
         conv1 = self.relu(self.conv1(x))
@@ -93,9 +87,6 @@ class UNet11(nn.Module):
         dec2 = self.dec2(torch.cat([dec3, conv2], 1))
         dec1 = self.dec1(torch.cat([dec2, conv1], 1))
         final = self.final(dec1)
-
-        if self.crf is not None:
-            final = self.crf(final, x)
 
         return final
 

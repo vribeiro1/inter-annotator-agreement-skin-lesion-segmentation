@@ -1,7 +1,6 @@
 import torch.nn as nn
 
 from torchvision.models import resnet
-from model.torchcrf import GaussCRF
 
 
 class BasicBlock(nn.Module):
@@ -80,7 +79,7 @@ class LinkNet(nn.Module):
     Generate Model Architecture
     """
 
-    def __init__(self, n_classes=21, crf=False):
+    def __init__(self, n_classes=21):
         """
         Model initialization
         :param x_n: number of input neurons
@@ -117,11 +116,6 @@ class LinkNet(nn.Module):
         self.tp_conv2 = nn.ConvTranspose2d(32, n_classes, 2, 2, 0)
         self.lsm = nn.LogSoftmax(dim=1)
 
-        if crf:
-            self.crf = GaussCRF(n_classes=n_classes)
-        else:
-            self.crf = None
-
     def forward(self, x):
         # Initial block
         x = self.in_block(x)
@@ -145,9 +139,6 @@ class LinkNet(nn.Module):
         y = self.tp_conv2(y)
 
         y = self.lsm(y)
-
-        if self.crf is not None:
-            y = self.crf(y, x)
 
         return y
 
