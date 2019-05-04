@@ -2,7 +2,7 @@ import torch.nn as nn
 
 from torchvision.models import resnet
 
-from model.torchcrf import CRF
+from model.torchcrf import GaussCRF
 
 
 class BasicBlock(nn.Module):
@@ -119,7 +119,7 @@ class LinkNet(nn.Module):
         self.lsm = nn.LogSoftmax(dim=1)
 
         if crf:
-            self.crf = CRF(num_tags=n_classes)
+            self.crf = GaussCRF(n_classes=n_classes)
         else:
             self.crf = None
 

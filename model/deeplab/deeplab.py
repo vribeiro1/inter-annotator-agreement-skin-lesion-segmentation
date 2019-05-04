@@ -5,7 +5,7 @@ from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 from model.deeplab.aspp import build_aspp
 from model.deeplab.decoder import build_decoder
 from model.deeplab.backbone import build_backbone
-from model.torchcrf import CRF
+from model.torchcrf import GaussCRF
 
 
 class DeepLab(nn.Module):
@@ -27,7 +27,7 @@ class DeepLab(nn.Module):
             self.freeze_bn()
 
         if crf:
-            self.crf = CRF(num_tags=num_classes)
+            self.crf = GaussCRF(n_classes=num_classes)
         else:
             self.crf = None
 

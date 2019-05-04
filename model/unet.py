@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision import models
 
-from model.torchcrf import CRF
+from model.torchcrf import GaussCRF
 
 
 def conv3x3(in_, out):
@@ -39,7 +39,7 @@ class DecoderBlock(nn.Module):
 
 
 class UNet11(nn.Module):
-    def __init__(self, num_filters=32, pretrained=False, crf=False):
+    def __init__(self, num_filters=32, pretrained=False, shape=(256, 256), crf=False):
         """
         :param num_classes:
         :param num_filters:
@@ -71,7 +71,7 @@ class UNet11(nn.Module):
 
         self.final = nn.Conv2d(num_filters, 1, kernel_size=1)
         if crf:
-            self.crf = CRF(num_tags=1)
+            self.crf = GaussCRF(n_classes=1)
         else:
             self.crf = None
 
