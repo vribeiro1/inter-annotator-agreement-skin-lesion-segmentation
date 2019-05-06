@@ -15,10 +15,10 @@ from skimage.morphology import square
 from cyclic_lr import CyclicLR
 from dataset import SkinLesionSegmentationDataset, MultimaskSkinLesionSegmentationDataset
 from losses import SoftJaccardBCEWithLogitsLoss, evaluate_jaccard, evaluate_dice
-from model.deeplab.deeplab import DeepLab
-from model.autodeeplab.auto_deeplab import AutoDeeplab
-from model.unet import UNet11
-from model.linknet import LinkNet
+from models.deeplab.deeplab import DeepLab
+from models.autodeeplab.auto_deeplab import AutoDeeplab
+from models.unet import UNet11
+from models.linknet import LinkNet
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
 from transforms.input import GaussianNoise, EnhanceContrast, EnhanceColor

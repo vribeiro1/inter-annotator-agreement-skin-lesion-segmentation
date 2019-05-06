@@ -44,19 +44,14 @@ pip3 install -r requirements.txt
 
 * Run the code
 ```
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_original_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_original_postproc_chull.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_chull_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_chull_postproc_chull.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_chull_val_original_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_chull_val_original_postproc_chull.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_chull_val_chull_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_chull_val_chull_postproc_chull.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_original_postproc_opening.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_opening_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_original_val_opening_postproc_opening.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_opening_val_original_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_opening_val_original_postproc_opening.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_opening_val_opening_postproc_original.yaml
-CUDA_VISIBLE_DEVICES=GPU-cecc4053 python3 train.py with config/isic2017_train_opening_val_opening_postproc_opening.yaml
+CUDA_VISIBLE_DEVICES=<gpu-id> python3 train.py with /path/to/config/file
 ```
+
+<b>Acknowledges:</b>
+
+The code available in the models package is based in the following repos:
+
+* DeepLab V3+: https://github.com/jfzhang95/pytorch-deeplab-xception
+* AutoDeepLab: https://github.com/MenghaoGuo/AutoDeeplab
+* U-Net: https://github.com/learningtitans/isic2018-seg
+* LinkNet: https://github.com/e-lab/pytorch-linknet

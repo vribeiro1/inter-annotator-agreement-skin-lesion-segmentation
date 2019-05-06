@@ -8,5 +8,5 @@
 # https://github.com/vacancy/Synchronized-BatchNorm-PyTorch
 # Distributed under MIT License.
 
-from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm1d, SynchronizedBatchNorm2d, SynchronizedBatchNorm3d
-from model.deeplab.sync_batchnorm.replicate import DataParallelWithCallback, patch_replication_callback
+from models.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm1d, SynchronizedBatchNorm2d, SynchronizedBatchNorm3d
+from models.deeplab.sync_batchnorm.replicate import DataParallelWithCallback, patch_replication_callback

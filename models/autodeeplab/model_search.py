@@ -1,5 +1,5 @@
-from model.autodeeplab.operations import *
-from model.autodeeplab.genotypes import PRIMITIVES
+from models.autodeeplab.operations import *
+from models.autodeeplab.genotypes import PRIMITIVES
 
 
 class MixedOp(nn.Module):

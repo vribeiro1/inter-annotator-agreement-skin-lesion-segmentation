@@ -2,7 +2,7 @@ import math
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
-from model.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
+from models.deeplab.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 
 
 class Bottleneck(nn.Module):

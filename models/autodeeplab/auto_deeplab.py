@@ -1,9 +1,9 @@
 import torch.nn.functional as F
-import model.autodeeplab.model_search as model_search
+import models.autodeeplab.model_search as model_search
 
-from model.autodeeplab.genotypes import PRIMITIVES
-from model.autodeeplab.genotypes import Genotype
-from model.autodeeplab.operations import *
+from models.autodeeplab.genotypes import PRIMITIVES
+from models.autodeeplab.genotypes import Genotype
+from models.autodeeplab.operations import *
 
 
 class AutoDeeplab(nn.Module):
