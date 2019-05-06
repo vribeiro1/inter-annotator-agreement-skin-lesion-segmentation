@@ -1,49 +1,32 @@
 import os
 import funcy
-import math
-import itertools
+import numpy as np
 
 from torch.utils.data import Dataset
-from torchvision.transforms import (Compose, ToTensor, Normalize, Resize)
+from torchvision.transforms import ToTensor, Resize, Normalize
 from typing import Callable, List, Tuple
 from PIL import Image
 
 
 class SkinLesionSegmentationDataset(Dataset):
-    def __init__(self, fpath: str, augmentation: List=None, input_preprocess: Callable=None, target_preprocess: Callable=None,
-                 with_targets: bool=True, shape: Tuple=(256, 256)):
+    def __init__(self, fpath: str, augmentations: List=None, input_preprocess: Callable=None,
+                 target_preprocess: Callable=None, with_targets: bool=True, shape: Tuple=(256, 256)):
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
-
-        if input_preprocess is None:
-            input_preprocess = []
-        else:
-            input_preprocess = [input_preprocess]
-
-        if target_preprocess is None:
-            target_preprocess = []
-        else:
-            target_preprocess = [target_preprocess]
-
-        if not augmentation:
-            augmentation = []
-        n_augmentation = math.factorial(len(augmentation)) if len(augmentation) > 0 else 0
-        augmentation_combinations = list(itertools.product([0, 1], repeat=n_augmentation))
-
         self.with_targets = with_targets
         self.size = shape
 
-        self.input_transform = Compose(
-            input_preprocess + [Resize(size=self.size),
-                                ToTensor(),
-                                Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
-        )
-        self.target_transform = Compose(
-            target_preprocess + [Resize(size=self.size),
-                                 ToTensor()]
-        )
+        if augmentations:
+            augmentations = [lambda x: x] + augmentations
+        else:
+            augmentations = [lambda x: x]
 
-        self.augmentation = augmentation
+        self.resize = Resize(size=self.size)
+        # self.normalize = Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        self.normalize = Normalize([0.485, 0.456, 0.406], [1.0, 1.0, 1.0])
+        self.to_tensor = ToTensor()
+        self.input_preprocess = input_preprocess
+        self.target_preprocess = target_preprocess
 
         with open(fpath, "r") as f:
             lines = filter(lambda l: bool(l), f.read().split("\n"))
@@ -53,44 +36,131 @@ class SkinLesionSegmentationDataset(Dataset):
             else:
                 data = [(input.strip(), None) for input in lines]
 
-        self.data = [(d, transform_list) for transform_list in augmentation_combinations for d in data]
+        self.data = [(d, augmentation) for augmentation in augmentations for d in data]
 
     @staticmethod
-    def _load_input_image(fpath):
+    def _load_input_image(fpath: str):
         img = Image.open(fpath).convert("RGB")
         return img
 
     @staticmethod
-    def _load_target_image(fpath):
-        img = Image.open(fpath).convert("P")
+    def _load_target_image(fpath: str):
+        img = Image.open(fpath).convert("L")
         return img
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item):
-        (input_fpath, target_fpath), aug_bins = self.data[item]
-        augmentation = [aug for aug, valid in zip(self.augmentation, aug_bins) if bool(valid)]
-        aug_compose = Compose(augmentation)
+        (input_fpath, target_fpath), augmentation = self.data[item]
 
         input_img = self._load_input_image(input_fpath)
-        input_img = aug_compose(input_img)
-        input_img = self.input_transform(input_img)
+        width, height = input_img.size
+        input_img = self.resize(input_img)
 
-        target_img = None
+        if self.input_preprocess is not None:
+            input_img = self.input_preprocess(input_img)
+
+        input_img = augmentation(input_img)
+        input_img = self.to_tensor(input_img)
+        input_img = self.normalize(input_img)
+
+        target_img = ""
         if target_fpath is not None:
             target_img = self._load_target_image(target_fpath)
-            target_img = aug_compose(target_img)
-            target_img = self.target_transform(target_img)
+            target_img = self.resize(target_img)
+
+            if self.target_preprocess is not None:
+                target_img = self.target_preprocess(target_img)
+
+            target_img = self.to_tensor(target_img)
 
         fname = os.path.basename(input_fpath).split(".")[0]
 
-        return input_img, target_img, fname
+        return input_img, target_img, fname, (width, height)
 
 
-if __name__ == "__main__":
-    fpath = "/Users/vribeiro/Documents/isic/train.txt"
+class MultimaskSkinLesionSegmentationDataset(Dataset):
+    def __init__(self, fpath: str, augmentations: List = None, input_preprocess: Callable = None,
+                 target_preprocess: Callable = None, with_targets: bool = True, shape: Tuple = (256, 256)):
+        if not os.path.isfile(fpath):
+            raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
 
-    dataset = SkinLesionSegmentationDataset(fpath)
-    for input_img, target_img, fname in dataset:
-        print(input_img.size(), target_img.size())
+        self.with_targets = with_targets
+        self.size = shape
+
+        if augmentations:
+            augmentations = [lambda x: x] + augmentations
+        else:
+            augmentations = [lambda x: x]
+
+        self.resize = Resize(size=self.size)
+        # self.normalize = Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        self.normalize = Normalize([0.485, 0.456, 0.406], [1.0, 1.0, 1.0])
+        self.to_tensor = ToTensor()
+        self.input_preprocess = input_preprocess
+        self.target_preprocess = target_preprocess
+
+        with open(fpath, "r") as f:
+            lines = filter(lambda l: bool(l), f.read().split("\n"))
+            if self.with_targets:
+                data = []
+                for line in lines:
+                    fpaths = line.split(" ")
+                    input_ = fpaths[0].strip()
+                    targets = funcy.walk(lambda f: f.strip(), fpaths[1:])
+
+                    data.append(
+                        (input_, targets)
+                    )
+            else:
+                data = [(input.strip(), None) for input in lines]
+
+        self.data = [(d, augmentation) for augmentation in augmentations for d in data]
+
+    @staticmethod
+    def _load_input_image(fpath: str):
+        img = Image.open(fpath).convert("RGB")
+        return img
+
+    @staticmethod
+    def _load_target_image(fpath: str):
+        img = Image.open(fpath).convert("L")
+        return img
+
+    def _random_selection(self, targets_list: List[str]):
+        target_fpath = np.random.choice(targets_list)
+
+        target_img = self._load_target_image(target_fpath)
+        target_img = self.resize(target_img)
+
+        if self.target_preprocess is not None:
+            target_img = self.target_preprocess(target_img)
+
+        return target_img
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        (input_fpath, targets_fpaths), augmentation = self.data[item]
+
+        input_img = self._load_input_image(input_fpath)
+        width, height = input_img.size
+        input_img = self.resize(input_img)
+
+        if self.input_preprocess is not None:
+            input_img = self.input_preprocess(input_img)
+
+        input_img = augmentation(input_img)
+        input_img = self.to_tensor(input_img)
+        input_img = self.normalize(input_img)
+
+        target_img = None
+        if self.with_targets:
+            target_img = self._random_selection(targets_fpaths)
+            target_img = self.to_tensor(target_img)
+
+        fname = os.path.basename(input_fpath).split(".")[0]
+
+        return input_img, target_img, fname, (width, height)

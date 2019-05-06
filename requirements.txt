@@ -1,7 +1,9 @@
 funcy
 Pillow
 sacred
+scikit-image
 pyyaml
 torch
 torchvision
 tqdm
+opencv-python

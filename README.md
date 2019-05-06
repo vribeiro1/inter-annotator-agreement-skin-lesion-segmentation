@@ -44,8 +44,14 @@ pip3 install -r requirements.txt
 
 * Run the code
 ```
-CUDA_VISIBLE_DEVICES=<gpu-id> python3 train.py with config/isic2017_trainfull_valfull.yaml
-CUDA_VISIBLE_DEVICES=<gpu-id> python3 train.py with config/isic2017_trainclean_valfull.yaml
-CUDA_VISIBLE_DEVICES=<gpu-id> python3 train.py with config/isic2017_trainfull_valclean.yaml
-CUDA_VISIBLE_DEVICES=<gpu-id> python3 train.py with config/isic2017_trainclean_valclean.yaml
+CUDA_VISIBLE_DEVICES=<gpu-id> python3 train.py with /path/to/config/file
 ```
+
+<b>Acknowledges:</b>
+
+The code available in the models package is based in the following repos:
+
+* DeepLab V3+: https://github.com/jfzhang95/pytorch-deeplab-xception
+* AutoDeepLab: https://github.com/MenghaoGuo/AutoDeeplab
+* U-Net: https://github.com/learningtitans/isic2018-seg
+* LinkNet: https://github.com/e-lab/pytorch-linknet
