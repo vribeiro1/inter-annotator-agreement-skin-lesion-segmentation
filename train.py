@@ -19,6 +19,7 @@ from models.deeplab.deeplab import DeepLab
 from models.autodeeplab.auto_deeplab import AutoDeeplab
 from models.unet import UNet11
 from models.linknet import LinkNet
+from models.refinenet.refinenet_4cascade import RefineNet4Cascade
 from summary_writer import SummaryWriter
 from transforms.target import Opening, ConvexHull
 from transforms.input import GaussianNoise, EnhanceContrast, EnhanceColor
@@ -125,6 +126,8 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
         model = UNet11(pretrained=True).to(device)
     elif model == "linknet":
         model = LinkNet(n_classes=1).to(device)
+    elif model == "refinenet":
+        model = RefineNet4Cascade(input_shape=(3, 256)).to(device)  # 3 channels, 256x256 input
     else:
         raise Exception("Invalid model '{}'".format(model))
 

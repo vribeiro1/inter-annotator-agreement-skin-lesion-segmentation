@@ -55,3 +55,4 @@ The code available in the models package is based in the following repos:
 * AutoDeepLab: https://github.com/MenghaoGuo/AutoDeeplab
 * U-Net: https://github.com/learningtitans/isic2018-seg
 * LinkNet: https://github.com/e-lab/pytorch-linknet
+* RefineNet: https://github.com/thomasjpfan/pytorch_refinenet
