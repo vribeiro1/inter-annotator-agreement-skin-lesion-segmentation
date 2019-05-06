@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torchvision.models as models
 
+from torch.nn.modules.upsampling import Upsample
 from models.refinenet.blocks import RefineNetBlock, ResidualConvUnit, RefineNetBlockImprovedPooling
 
 
@@ -84,6 +85,8 @@ class BaseRefineNet4Cascade(nn.Module):
                 padding=0,
                 bias=True))
 
+        self.upsample = Upsample(size=input_size)
+
     def forward(self, x):
         layer_1 = self.layer1(x)
         layer_2 = self.layer2(layer_1)
@@ -100,8 +103,9 @@ class BaseRefineNet4Cascade(nn.Module):
         path_2 = self.refinenet2(path_3, layer_2_rn)
         path_1 = self.refinenet1(path_2, layer_1_rn)
         out = self.output_conv(path_1)
+        upsampled_output = self.upsample(out)
 
-        return out
+        return upsampled_output
 
 
 class RefineNet4CascadePoolingImproved(BaseRefineNet4Cascade):
