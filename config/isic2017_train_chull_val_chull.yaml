@@ -6,3 +6,4 @@ val_fpath: /workspace/skin/data/validation_full_isic2017.txt
 train_preprocess: convex_hull
 val_preprocess: convex_hull
 multimask: false
+patience: 20

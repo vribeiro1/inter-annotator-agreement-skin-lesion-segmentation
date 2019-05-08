@@ -57,6 +57,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
     losses = []
     jaccards = []
+    jaccards_threshold = []
     dices = []
     for i, (inputs, targets, fname, (_, _)) in enumerate(progress_bar):
         inputs = Variable(inputs, requires_grad=True).to(device)
@@ -68,6 +69,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
             loss = criterion(outputs, targets)
             jaccard = evaluate_jaccard(outputs, targets)
+            jaccard_threshold = jaccard.item() if jaccard.item() > 0.65 else 0.0
             dice = evaluate_dice(jaccard.item())
 
             if training:
@@ -77,6 +79,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
             losses.append(loss.item())
             jaccards.append(jaccard.item())
+            jaccards_threshold.append(jaccard_threshold)
             dices.append(dice)
             progress_bar.set_postfix(OrderedDict({"{} loss".format(phase): np.mean(losses),
                                                   "{} jaccard".format(phase): np.mean(jaccards),
@@ -84,25 +87,29 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
 
     mean_loss = np.mean(losses)
     mean_jacc = np.mean(jaccards)
+    mean_jacc_threshold = np.mean(jaccards_threshold)
     mean_dice = np.mean(dices)
 
     loss_tag = "{}.loss".format(phase)
     jacc_tag = "{}.jaccard".format(phase)
+    jacc_threshold_tag = "{}.jaccard_threshold".format(phase)
     dice_tag = "{}.dice".format(phase)
 
     writer.add_scalar(loss_tag, mean_loss, epoch)
     writer.add_scalar(jacc_tag, mean_jacc, epoch)
+    writer.add_scalar(jacc_threshold_tag, mean_jacc_threshold, epoch)
     writer.add_scalar(dice_tag, mean_dice, epoch)
 
     info = {"loss": mean_loss,
             "jaccard": mean_jacc,
+            "jaccard_threshold": mean_jacc_threshold,
             "dice": mean_dice}
 
     return info
 
 
 @ex.automain
-def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, _run):
+def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preprocess, val_preprocess, multimask, patience, _run):
     run_validation = val_fpath is not None
 
     assert train_preprocess in available_conditioning, "Train pre-process '{}' is not available. Available functions are: '{}'".format(train_preprocess, list(available_conditioning.keys()))
@@ -121,7 +128,7 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
     if model == "deeplab":
         model = DeepLab(num_classes=1).to(device)
     elif model == "autodeeplab":
-            model = AutoDeeplab(num_classes=1).to(device)
+        model = AutoDeeplab(num_classes=1).to(device)
     elif model == "unet":
         model = UNet11(pretrained=True).to(device)
     elif model == "linknet":
@@ -167,16 +174,23 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
 
     info = {}
     epochs = range(1, n_epochs + 1)
-    best_jacc = np.inf
+    best_jacc = 0
+    epochs_since_best = 0
 
     for epoch in epochs:
         info["train"] = run_epoch("train", epoch, model, dataloaders["train"], optimizer, loss_fn, scheduler, writer)
 
         if run_validation:
             info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, scheduler, writer)
-            if info["validation"]["loss"] < best_jacc:
-                best_jacc = info["validation"]["jaccard"]
+            if info["validation"]["jacc_threshold"] > best_jacc:
+                best_jacc = info["validation"]["jacc_threshold"]
                 torch.save(model, best_model_path)
+                epochs_since_best = 0
+            else:
+                epochs_since_best += 1
 
         torch.save(model, last_model_path)
         writer.commit()
+
+        if epochs_since_best > patience:
+            break
