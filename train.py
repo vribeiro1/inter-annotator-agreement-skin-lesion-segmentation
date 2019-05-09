@@ -182,8 +182,8 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
 
         if run_validation:
             info["validation"] = run_epoch("validation", epoch, model, dataloaders["validation"], optimizer, loss_fn, scheduler, writer)
-            if info["validation"]["jacc_threshold"] > best_jacc:
-                best_jacc = info["validation"]["jacc_threshold"]
+            if info["validation"]["jaccard_threshold"] > best_jacc:
+                best_jacc = info["validation"]["jaccard_threshold"]
                 torch.save(model, best_model_path)
                 epochs_since_best = 0
             else:
