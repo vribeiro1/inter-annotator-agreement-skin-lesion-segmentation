@@ -83,6 +83,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
             dices.append(dice)
             progress_bar.set_postfix(OrderedDict({"{} loss".format(phase): np.mean(losses),
                                                   "{} jaccard".format(phase): np.mean(jaccards),
+                                                  "{} jaccard_threshold".format(phase): np.mean(jaccards_threshold),
                                                   "{} dice".format(phase): np.mean(dices)}))
 
     mean_loss = np.mean(losses)
