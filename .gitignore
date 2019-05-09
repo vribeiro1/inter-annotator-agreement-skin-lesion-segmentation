@@ -1,6 +1,9 @@
 __pycache__
 *.pyc
 
+*.ipynb
+.ipynb_checkpoints
+
 .env
 .idea
 results
