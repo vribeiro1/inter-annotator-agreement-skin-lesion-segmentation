@@ -183,6 +183,9 @@ class MultimaskSkinLesionSegmentationDataset(Dataset):
 
         fname = os.path.basename(input_fpath).split(".")[0]
 
+        if self.selection_method == self._random_selection:
+            target_imgs = target_imgs[0]
+
         return input_img, target_imgs, fname, (width, height)
 
 
