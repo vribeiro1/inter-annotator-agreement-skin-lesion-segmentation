@@ -82,7 +82,8 @@ class SkinLesionSegmentationDataset(Dataset):
 
 class MultimaskSkinLesionSegmentationDataset(Dataset):
     def __init__(self, fpath: str, augmentations: List = None, input_preprocess: Callable = None,
-                 target_preprocess: Callable = None, with_targets: bool = True, shape: Tuple = (256, 256)):
+                 target_preprocess: Callable = None, with_targets: bool = True, select="random",
+                 shape: Tuple = (256, 256)):
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Could not find dataset file: '{}'".format(fpath))
 
@@ -116,6 +117,11 @@ class MultimaskSkinLesionSegmentationDataset(Dataset):
             else:
                 data = [(input.strip(), None) for input in lines]
 
+        if select == "all":
+            self.selection_method = self._select_all
+        else:
+            self.selection_method = self._random_selection
+
         self.data = [(d, augmentation) for augmentation in augmentations for d in data]
 
     @staticmethod
@@ -137,7 +143,21 @@ class MultimaskSkinLesionSegmentationDataset(Dataset):
         if self.target_preprocess is not None:
             target_img = self.target_preprocess(target_img)
 
-        return target_img
+        return [target_img]
+
+    def _select_all(self, targets_list: List[str]):
+        target_imgs = []
+
+        for target_fpath in targets_list:
+            target_img = self._load_target_image(target_fpath)
+            target_img = self.resize(target_img)
+
+            if self.target_preprocess is not None:
+                target_img = self.target_preprocess(target_img)
+
+            target_imgs.append(target_img)
+
+        return target_imgs
 
     def __len__(self):
         return len(self.data)
@@ -156,11 +176,27 @@ class MultimaskSkinLesionSegmentationDataset(Dataset):
         input_img = self.to_tensor(input_img)
         input_img = self.normalize(input_img)
 
-        target_img = None
+        target_imgs = None
         if self.with_targets:
-            target_img = self._random_selection(targets_fpaths)
-            target_img = self.to_tensor(target_img)
+            target_imgs = self.selection_method(targets_fpaths)
+            target_imgs = funcy.walk(self.to_tensor, target_imgs)
 
         fname = os.path.basename(input_fpath).split(".")[0]
 
-        return input_img, target_img, fname, (width, height)
+        return input_img, target_imgs, fname, (width, height)
+
+
+if __name__ == "__main__":
+    from torch.utils import data
+
+    dataset = MultimaskSkinLesionSegmentationDataset(
+        "/Users/vribeiro/Documents/mestrado/workspace/skin/data/train_isic_titans_clean.txt",
+        select="all"
+    )
+    dataloader = data.DataLoader(dataset,
+                                 batch_size=1,
+                                 num_workers=8,
+                                 shuffle=False)
+
+    for inputs, targets, fname, (_, _) in dataset:
+        print(inputs.shape, len(targets), fname)

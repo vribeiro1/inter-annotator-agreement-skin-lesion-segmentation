@@ -1,3 +1,4 @@
+import funcy
 import os
 import numpy as np
 import torch
@@ -61,14 +62,22 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
     dices = []
     for i, (inputs, targets, fname, (_, _)) in enumerate(progress_bar):
         inputs = Variable(inputs, requires_grad=True).to(device)
-        targets = Variable(targets, requires_grad=True).to(device)
+
+        if isinstance(targets, list):
+            targets = funcy.walk(lambda target: Variable(target, requires_grad=True).to(device))
+        else:
+            targets = Variable(targets, requires_grad=True).to(device)
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(training):
             outputs = model(inputs)
 
-            loss = criterion(outputs, targets)
-            jaccard = evaluate_jaccard(outputs, targets)
+            if isinstance(targets, list):
+                loss = min(funcy.walk(lambda target: criterion(outputs, target), targets))
+                jaccard = max(funcy.walk(lambda target: evaluate_jaccard(outputs, target), targets))
+            else:
+                loss = criterion(outputs, targets)
+                jaccard = evaluate_jaccard(outputs, targets)
             jaccard_threshold = jaccard.item() if jaccard.item() > 0.65 else 0.0
             dice = evaluate_dice(jaccard.item())
 
@@ -149,15 +158,28 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
         EnhanceColor(0.5, 0.1)
     ]
 
+    dataloaders = {}
+    train_preprocess_fn = available_conditioning[train_preprocess]
+    val_preprocess_fn = available_conditioning[val_preprocess]
+
+    train_dataset_args = dict(
+        fpath=train_fpath,
+        augmentations=augmentations,
+        target_preprocess=train_preprocess_fn
+    )
+    validation_dataset_args = dict(
+        fpath=val_fpath,
+        target_preprocess=val_preprocess_fn
+    )
+
     if multimask:
         DatasetClass = MultimaskSkinLesionSegmentationDataset
+        train_dataset_args["select"] = "random"
+        validation_dataset_args["select"] = "all"
     else:
         DatasetClass = SkinLesionSegmentationDataset
 
-    dataloaders = {}
-
-    train_preprocess_fn = available_conditioning[train_preprocess]
-    train_dataset = DatasetClass(train_fpath, augmentations=augmentations, target_preprocess=train_preprocess_fn)
+    train_dataset = DatasetClass(**train_dataset_args)
     dataloaders["train"] = data.DataLoader(train_dataset,
                                            batch_size=batch_size,
                                            num_workers=8,
@@ -165,10 +187,9 @@ def main(model, batch_size, n_epochs, lr, train_fpath, val_fpath, train_preproce
                                            worker_init_fn=set_seeds)
 
     if run_validation:
-        val_preprocess_fn = available_conditioning[val_preprocess]
-        val_dataset = DatasetClass(val_fpath, target_preprocess=val_preprocess_fn)
+        val_dataset = DatasetClass(**validation_dataset_args)
         dataloaders["validation"] = data.DataLoader(val_dataset,
-                                                    batch_size=batch_size,
+                                                    batch_size=batch_size if not multimask else 1,
                                                     num_workers=8,
                                                     shuffle=False,
                                                     worker_init_fn=set_seeds)
