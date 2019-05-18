@@ -64,7 +64,7 @@ def run_epoch(phase, epoch, model, dataloader, optimizer, criterion, scheduler, 
         inputs = Variable(inputs, requires_grad=True).to(device)
 
         if isinstance(targets, list):
-            targets = funcy.walk(lambda target: Variable(target, requires_grad=True).to(device))
+            targets = funcy.walk(lambda target: Variable(target, requires_grad=True).to(device), targets)
         else:
             targets = Variable(targets, requires_grad=True).to(device)
 
