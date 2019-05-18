@@ -1,9 +1,10 @@
-batch_size: 16
-n_epochs: 200
+model: deeplab
+batch_size: 8
+n_epochs: 100
 lr: 0.003
 train_fpath: /workspace/skin/data/train_isic_titans_full.txt
 val_fpath: /workspace/skin/data/validation_isic_titans_full.txt
 train_preprocess: original
 val_preprocess: original
 multimask: true
-patience: 20
+patience: 100
