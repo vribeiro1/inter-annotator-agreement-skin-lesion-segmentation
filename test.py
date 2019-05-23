@@ -84,11 +84,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     test_dermofit_path = os.path.join(BASE_PATH, "data", "test_dermofit.txt")
-    test_isic_titans_path = os.path.join(BASE_PATH, "data", "test_isic_titans.txt")
+    test_isic_titans_path = os.path.join(BASE_PATH, "data", "isic2017_test.txt")
     test_ph2_path = os.path.join(BASE_PATH, "data", "test_ph2.txt")
 
     # main("dermofit", test_dermofit_path, args.model_path, args.save_to)
-    main("isic_titans", test_isic_titans_path, args.model_path, args.save_to)
+    main("isic_2017", test_isic_titans_path, args.model_path, args.save_to)
     main("ph2", test_ph2_path, args.model_path, args.save_to)
 
 
