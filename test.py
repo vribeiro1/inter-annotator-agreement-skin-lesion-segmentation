@@ -102,7 +102,7 @@ if __name__ == "__main__":
     assert args.conditioning in available_conditioning, "Unavailable conditioning '{}'".format(args.conditioning)
 
     test_dermofit_path = os.path.join(BASE_PATH, "data", "test_dermofit.txt")
-    test_isic_titans_path = os.path.join(BASE_PATH, "data", "test_isic_titans.txt")
+    test_isic_titans_path = os.path.join(BASE_PATH, "data", "test_isic_titans_2000.txt")
     test_ph2_path = os.path.join(BASE_PATH, "data", "test_ph2.txt")
 
     main("dermofit", test_dermofit_path, args.model_path, args.save_to, args.conditioning)
